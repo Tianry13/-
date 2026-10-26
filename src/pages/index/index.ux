@@ -1,0 +1,1445 @@
+<template>
+  <stack class="page">
+    <!-- ==================== 主界面 ==================== -->
+    <div class="main column" @swipe="onSwipe">
+
+      <!-- x / y 表达式并列 -->
+      <div class="pill-row row">
+        <div class="expr-pill row" onclick="openEditorX">
+          <text class="expr-label">x =</text>
+          <text class="expr-text">{{dispX}}</text>
+        </div>
+        <div class="expr-pill row" onclick="openEditorY">
+          <text class="expr-label">y =</text>
+          <text class="expr-text">{{dispY}}</text>
+        </div>
+      </div>
+
+      <!-- 函数图象 -->
+      <div class="plot">
+        <!-- 图层：拖动时整体平移，只更新本容器的 left/top -->
+        <div class="layer" style="{{layerStyle}}">
+          <div class="gv" for="{{gridV}}" style="{{$item.s}}"></div>
+          <div class="gh" for="{{gridH}}" style="{{$item.s}}"></div>
+          <div class="axis-h" style="{{axisHS}}"></div>
+          <div class="axis-v" style="{{axisVS}}"></div>
+          <text class="tick-x" for="{{labelsX}}" style="{{$item.s}}">{{$item.txt}}</text>
+          <text class="tick-y" for="{{labelsY}}" style="{{$item.s}}">{{$item.txt}}</text>
+          <!-- 曲线单独一层：拖动中并入视口时整层挪一个偏移，不用逐个重写笔触坐标 -->
+          <div class="curve" style="{{curveStyle}}">
+            <div class="pen" for="{{curveDots}}" style="{{$item.s}}"></div>
+          </div>
+          <div class="zero" for="{{zeros}}" style="{{$item.s}}"></div>
+          <div class="cursor-line" if="{{cursorShown}}" style="{{cursorLineS}}"></div>
+          <div class="cursor-dot" if="{{cursorShown}}" style="{{cursorDotS}}"></div>
+        </div>
+
+        <!-- 触摸层：保证 offsetX 与图象坐标一致 -->
+        <div class="plot-touch" ontouchstart="onPlotTouchStart"
+                                ontouchmove="onPlotTouchMove"
+                                ontouchend="onPlotTouchEnd"></div>
+
+        <!-- 加载过渡 -->
+        <div class="loading column" if="{{loading}}">
+          <text class="loading-t">{{L.drawing}}</text>
+        </div>
+      </div>
+
+      <!-- 状态 / 读数 -->
+      <div class="status">
+        <text class="status-text">{{statusText}}</text>
+      </div>
+
+      <!-- 控制条 -->
+      <div class="ctrl row">
+        <div class="cbtn row" onclick="onMinus"><text class="cbtn-t">−</text></div>
+        <div class="cbtn row" onclick="onCycle"><text class="cbtn-t">{{L.cycle}}</text></div>
+        <div class="cbtn row" onclick="onPlus"><text class="cbtn-t">+</text></div>
+        <div class="cbtn row" onclick="openEditorY"><text class="cbtn-t">{{L.func}}</text></div>
+        <div class="cbtn row" onclick="goSettings"><text class="cbtn-t">{{L.settings}}</text></div>
+      </div>
+    </div>
+
+    <!-- ==================== 编辑面板 ==================== -->
+    <div class="mask column" if="{{editorVisible}}">
+      <div class="p-head row">
+        <text class="p-title">{{L.editorTitle}}</text>
+        <div class="p-page row" onclick="kbFlip"><text class="p-page-t">{{kbLabel}}</text></div>
+      </div>
+
+      <div class="p-pager row">
+        <div class="parr row" onclick="presetPrev"><text class="parr-t">‹</text></div>
+        <div class="p-pbox column" onclick="usePreset">
+          <text class="p-pname">{{presetName}}</text>
+        </div>
+        <div class="parr row" onclick="presetNext"><text class="parr-t">›</text></div>
+      </div>
+
+      <div class="p-disp row" onclick="editX">
+        <text class="p-disp-m">{{xMark}}</text>
+        <text class="p-disp-l">x =</text>
+        <text class="p-disp-t">{{customExprX}}</text>
+      </div>
+
+      <div class="p-disp row" onclick="editY">
+        <text class="p-disp-m">{{yMark}}</text>
+        <text class="p-disp-l">y =</text>
+        <text class="p-disp-t">{{customExprY}}</text>
+      </div>
+
+      <div class="kb column" if="{{!kbPage2}}">
+        <div class="kb-row row">
+          <div class="p-key" onclick="k7"><text class="p-key-t">7</text></div>
+          <div class="p-key" onclick="k8"><text class="p-key-t">8</text></div>
+          <div class="p-key" onclick="k9"><text class="p-key-t">9</text></div>
+          <div class="p-key" onclick="kDiv"><text class="p-key-t">÷</text></div>
+          <div class="p-key" onclick="kMul"><text class="p-key-t">×</text></div>
+        </div>
+        <div class="kb-row row">
+          <div class="p-key" onclick="k4"><text class="p-key-t">4</text></div>
+          <div class="p-key" onclick="k5"><text class="p-key-t">5</text></div>
+          <div class="p-key" onclick="k6"><text class="p-key-t">6</text></div>
+          <div class="p-key" onclick="kSub"><text class="p-key-t">−</text></div>
+          <div class="p-key" onclick="kAdd"><text class="p-key-t">+</text></div>
+        </div>
+        <div class="kb-row row">
+          <div class="p-key" onclick="k1"><text class="p-key-t">1</text></div>
+          <div class="p-key" onclick="k2"><text class="p-key-t">2</text></div>
+          <div class="p-key" onclick="k3"><text class="p-key-t">3</text></div>
+          <div class="p-key" onclick="kLp"><text class="p-key-t">(</text></div>
+          <div class="p-key" onclick="kRp"><text class="p-key-t">)</text></div>
+        </div>
+        <div class="kb-row row">
+          <div class="p-key" onclick="k0"><text class="p-key-t">0</text></div>
+          <div class="p-key" onclick="kDot"><text class="p-key-t">.</text></div>
+          <div class="p-key" onclick="kPow"><text class="p-key-t">^</text></div>
+          <div class="p-key" onclick="kX"><text class="p-key-t">x</text></div>
+          <div class="p-key" onclick="kBS"><text class="p-key-t">del</text></div>
+        </div>
+        <div class="kb-row row">
+          <div class="p-key" onclick="kSin"><text class="p-key-t">sin</text></div>
+          <div class="p-key" onclick="kCos"><text class="p-key-t">cos</text></div>
+          <div class="p-key" onclick="kTan"><text class="p-key-t">tan</text></div>
+          <div class="p-key" onclick="kLn"><text class="p-key-t">ln</text></div>
+          <div class="p-key" onclick="kLog"><text class="p-key-t">log</text></div>
+        </div>
+        <div class="kb-row row">
+          <div class="p-key" onclick="kSqrt"><text class="p-key-t">sqrt</text></div>
+          <div class="p-key" onclick="kExp"><text class="p-key-t">exp</text></div>
+          <div class="p-key" onclick="kAbs"><text class="p-key-t">abs</text></div>
+          <div class="p-key" onclick="kPi"><text class="p-key-t">pi</text></div>
+          <div class="p-key" onclick="kE"><text class="p-key-t">e</text></div>
+        </div>
+        <div class="kb-row row">
+          <div class="p-key" onclick="kA"><text class="p-key-t">a</text></div>
+          <div class="p-key" onclick="kB"><text class="p-key-t">b</text></div>
+          <div class="p-key" onclick="kC"><text class="p-key-t">c</text></div>
+          <div class="p-key" onclick="kT"><text class="p-key-t">t</text></div>
+          <div class="p-key" onclick="kAC"><text class="p-key-t">AC</text></div>
+        </div>
+      </div>
+
+      <!-- 第二页：引擎支持但首页放不下的函数。行在 231px 内垂直居中，
+           底部"绘制/返回"不会因为页切换而跳动。 -->
+      <div class="kb kb2 column" if="{{kbPage2}}">
+        <div class="kb-row row">
+          <div class="p-key" onclick="kAsin"><text class="p-key-t">asin</text></div>
+          <div class="p-key" onclick="kAcos"><text class="p-key-t">acos</text></div>
+          <div class="p-key" onclick="kAtan"><text class="p-key-t">atan</text></div>
+          <div class="p-key" onclick="kLg"><text class="p-key-t">lg</text></div>
+          <div class="p-key" onclick="kFloor"><text class="p-key-t">floor</text></div>
+        </div>
+        <div class="kb-row row">
+          <div class="p-key" onclick="kCeil"><text class="p-key-t">ceil</text></div>
+          <div class="p-key" onclick="kRound"><text class="p-key-t">round</text></div>
+          <div class="p-key" onclick="kSign"><text class="p-key-t">sign</text></div>
+          <div class="p-key" onclick="kLp"><text class="p-key-t">(</text></div>
+          <div class="p-key" onclick="kRp"><text class="p-key-t">)</text></div>
+        </div>
+        <div class="kb-row row">
+          <div class="p-key" onclick="kX"><text class="p-key-t">x</text></div>
+          <div class="p-key" onclick="kBS"><text class="p-key-t">del</text></div>
+          <div class="p-key" onclick="kAC"><text class="p-key-t">AC</text></div>
+          <div class="p-key" onclick="kPi"><text class="p-key-t">pi</text></div>
+          <div class="p-key" onclick="kE"><text class="p-key-t">e</text></div>
+        </div>
+      </div>
+
+      <div class="p-btns row">
+        <div class="pbtn row" onclick="applyCustom"><text class="pbtn-t">{{L.draw}}</text></div>
+        <div class="pbtn row" onclick="closeEditor"><text class="pbtn-t">{{L.back}}</text></div>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<style>
+@keyframes fadePulse {
+  0%   { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.page {
+  width: 480px;
+  height: 480px;
+  background-color: #000000;
+}
+.column { flex-direction: column; }
+.row    { flex-direction: row; }
+
+/* ---------- 主界面 ---------- */
+.main {
+  width: 466px;
+  height: 466px;
+  align-items: center;
+}
+
+.pill-row {
+  width: 352px;
+  margin-top: 48px;
+  justify-content: space-between;
+}
+.expr-pill {
+  width: 172px;
+  height: 40px;
+  border-radius: 20px;
+  background-color: #0d1620;
+  align-items: center;
+  justify-content: center;
+}
+.expr-label { font-size: 15px; color: #2ce8c0; margin-right: 5px; }
+.expr-text  { font-size: 15px; color: #e6f2ef; }
+
+/* ---------- 图象区 ---------- */
+.plot {
+  width: 360px;
+  height: 224px;
+  margin-top: 8px;
+  position: relative;
+  overflow: hidden;
+  background-color: #000000;
+}
+/* 图层：拖动时整体平移 */
+.layer {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 360px;
+  height: 224px;
+}
+.gv {
+  position: absolute;
+  top: 0px;
+  width: 1px;
+  height: 224px;
+  background-color: #182434;
+}
+.gh {
+  position: absolute;
+  left: 0px;
+  width: 360px;
+  height: 1px;
+  background-color: #182434;
+}
+.axis-h {
+  position: absolute;
+  left: 0px;
+  width: 360px;
+  height: 2px;
+  background-color: #3a5a7c;
+}
+.axis-v {
+  position: absolute;
+  top: 0px;
+  width: 2px;
+  height: 224px;
+  background-color: #3a5a7c;
+}
+
+.tick-x {
+  position: absolute;
+  width: 48px;
+  height: 17px;
+  font-size: 13px;
+  color: #8fb0cc;
+  text-align: center;
+}
+.tick-y {
+  position: absolute;
+  width: 48px;
+  height: 17px;
+  font-size: 13px;
+  color: #8fb0cc;
+  text-align: right;
+}
+
+/* 曲线层：笔触全部放在这里面，拖动时只改它自己的 left/top 一个样式 */
+.curve {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 360px;
+  height: 224px;
+}
+/* 曲线笔触：圆头圆点沿真实路径叠压成线 */
+.pen {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+  background-color: #2ce8c0;
+}
+/* 零点标记：落在 x 轴上，颜色刻意区别于曲线与游标 */
+.zero {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 5px;
+  background-color: #ff6b6b;
+}
+
+.cursor-line {
+  position: absolute;
+  top: 0px;
+  width: 2px;
+  height: 224px;
+  background-color: #ffb443;
+  opacity: 0.75;
+}
+.cursor-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background-color: #ffb443;
+}
+
+/* 触摸层：覆盖图象区，保证坐标一致 */
+.plot-touch {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 360px;
+  height: 224px;
+}
+
+/* 加载过渡 */
+.loading {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 360px;
+  height: 224px;
+  background-color: #000000;
+  align-items: center;
+  justify-content: center;
+}
+.loading-t {
+  font-size: 16px;
+  color: #2ce8c0;
+  animation-name: fadePulse;
+  animation-duration: 800ms;
+  animation-iteration-count: 3;
+  animation-direction: alternate;
+  animation-fill-mode: forwards;
+}
+
+/* ---------- 状态 / 控制条 ---------- */
+.status {
+  width: 340px;
+  height: 30px;
+  margin-top: 6px;
+  align-items: center;
+  justify-content: center;
+}
+.status-text { font-size: 15px; color: #6b8299; }
+
+.ctrl {
+  margin-top: 6px;
+  width: 330px;
+  height: 52px;
+  justify-content: space-between;
+}
+.cbtn {
+  width: 58px;
+  height: 52px;
+  border-radius: 16px;
+  background-color: #12222e;
+  align-items: center;
+  justify-content: center;
+}
+.cbtn-t { font-size: 18px; color: #2ce8c0; }
+
+/* ---------- 编辑面板 ---------- */
+.mask {
+  width: 466px;
+  height: 466px;
+  background-color: #060c12;
+  align-items: center;
+}
+/* 标题行：标题 + 键盘翻页药丸。宽度只有 230px 是为了让内容始终落在
+   圆屏顶部收窄的可见区内（y≈20~46 时可用半宽只有约 103px）。 */
+.p-head {
+  width: 230px;
+  height: 26px;
+  margin-top: 20px;
+  align-items: center;
+  justify-content: center;
+}
+.p-title {
+  font-size: 18px;
+  color: #e6f2ef;
+}
+.p-page {
+  width: 44px;
+  height: 22px;
+  margin-left: 8px;
+  border-radius: 8px;
+  background-color: #12222e;
+  align-items: center;
+  justify-content: center;
+}
+.p-page-t { font-size: 12px; color: #2ce8c0; }
+.p-pager {
+  width: 320px;
+  height: 32px;
+  margin-top: 4px;
+  align-items: center;
+}
+.parr {
+  width: 40px;
+  height: 32px;
+  background-color: #12222e;
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+}
+.parr-t { font-size: 22px; color: #2ce8c0; }
+.p-pbox {
+  flex: 1;
+  height: 32px;
+  margin-left: 6px;
+  margin-right: 6px;
+  background-color: #0d1620;
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+}
+.p-pname { font-size: 15px; color: #6b8299; }
+.p-disp {
+  width: 330px;
+  height: 33px;
+  margin-top: 3px;
+  background-color: #0d1620;
+  border-radius: 10px;
+  align-items: center;
+}
+.p-disp-m { width: 18px; font-size: 13px; color: #ffb443; margin-left: 8px; }
+.p-disp-l { font-size: 15px; color: #2ce8c0; margin-right: 5px; }
+.p-disp-t { font-size: 15px; color: #e6f2ef; }
+
+.kb {
+  width: 330px;
+  margin-top: 5px;
+}
+/* 第二页只有 3 行，用等高容器把行居中，保住底部按钮的位置 */
+.kb2 {
+  height: 231px;
+  justify-content: center;
+}
+.kb-row {
+  width: 330px;
+  height: 31px;
+  margin-bottom: 2px;
+  justify-content: space-between;
+}
+.p-key {
+  width: 62px;
+  height: 31px;
+  border-radius: 8px;
+  background-color: #12222e;
+  align-items: center;
+  justify-content: center;
+}
+.p-key-t { font-size: 14px; color: #e6f2ef; }
+.p-btns {
+  width: 220px;
+  height: 40px;
+  margin-top: 5px;
+  justify-content: space-between;
+}
+.pbtn {
+  width: 104px;
+  height: 40px;
+  border-radius: 13px;
+  background-color: #12222e;
+  align-items: center;
+  justify-content: center;
+}
+.pbtn-t { font-size: 18px; color: #2ce8c0; }
+</style>
+
+<script>
+import router from '@system.router'
+import vibrator from '@system.vibrator'
+import { tokenize, toRPN, evalRPN } from '../../common/engine.js'
+import { walkPens, shiftLeft, shiftTop, shiftBoth, toPx } from '../../common/plot.js'
+import * as i18n from '../../common/i18n.js'
+
+/* ---------- 工具函数 ---------- */
+function fmt(v) {
+  if (v === null || v === undefined || !isFinite(v)) { return '--' }
+  if (v !== 0 && (Math.abs(v) >= 10000 || Math.abs(v) < 0.01)) {
+    return v.toExponential(1)
+  }
+  return '' + (Math.round(v * 100) / 100)
+}
+
+function short(s, n) {
+  s = '' + s
+  return s.length > n ? s.substring(0, n) + '..' : s
+}
+
+function niceStep(unit) {
+  var arr = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100]
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] * unit >= 30) { return arr[i] }
+  }
+  return 100
+}
+
+function buzz(ms) {
+  try {
+    vibrator.vibrate({ duration: ms || 15 })
+  } catch (e) { /* 忽略振动失败 */ }
+}
+
+/* ---------- 节点池工具 ---------- */
+function hideV() { return { s: { left: '-40px' } } }
+function hideH() { return { s: { top: '-40px' } } }
+function hideP() { return { s: { left: '-40px', top: '-40px' } } }
+function hideL() { return { s: { left: '-60px', top: '-60px' }, txt: '' } }
+
+function padTo(list, n, make) {
+  for (var i = list.length; i < n; i++) { list.push(make()) }
+  return list
+}
+
+
+/* =========================================================
+ * 2. 页面逻辑
+ * ========================================================= */
+
+/* =========================================================
+ * 性能旋钮（真机上卡就按这个顺序降，一项一项试）
+ *   1. M   —— 外扩边距。调大 = 一次拖动更少重算（更顺），但图元池要同步
+ *             调大，每次全量重绘更贵。M 与下面的 CAP_* 必须匹配：
+ *             CAP_GV > (CW + 2M)/格子间距 的最小值（unit=30 时约 30px/格）
+ *   2. COLS —— 曲线横向采样数。调小明显省求值，曲线在陡处变折线
+ *   3. CAP_PEN —— 笔触池。调小省样式更新，曲线变疏（不会断，间距自适应）
+ *   4. PEN_STEP —— 笔触间距。调大同样省点，但会看到颗粒
+ * ========================================================= */
+
+var CW = 360
+var CH = 224
+var M = 140          /* 采样/绘制外扩边距：决定一次拖动能走多远才必须重算 */
+var PAN_FOLD = 120   /* 累计平移超过它就并入视口（留 20px 余量，绝不超出 M） */
+var PAN_LIMIT = 120  /* 并入累计量超过它就必须真正重算一次，把覆盖范围补回来 */
+
+var COLS = 90       /* y=f(x) 采样数（覆盖 [-M, W+M]） */
+var T_N = 72        /* 参数曲线采样数 */
+var T_MIN = -6.2832
+var T_MAX = 6.2832
+var PEN_STEP = 4    /* 笔触圆点间距（曲线过长时按总长自适应放宽） */
+
+var CAP_GV = 23     /* 竖网格线池：覆盖 (360+280)/30 ≈ 21 条 */
+var CAP_GH = 18     /* 横网格线池：覆盖 (224+280)/30 ≈ 17 条 */
+var CAP_LX = 23
+var CAP_LY = 19
+var CAP_PEN = 150   /* 笔触点池：可见区约 4px 一个点，外扩区用采样点本身 */
+var CAP_ZERO = 6    /* 零点标记池 */
+
+export default {
+  private: {
+    /* ---- 界面标签（随语言切换整块重赋值，见 applyLocale） ---- */
+    L: i18n.section('ui'),
+
+    /* ---- 主页面并列表达式 ---- */
+    dispX: 'x',
+    dispY: 'a*sin(b*x)+c',
+
+    /* ---- 展示数据 ---- */
+    fnName: '',
+    statusText: '',
+    loading: true,
+    editorVisible: false,
+    kbPage2: false,
+    kbLabel: '2/2',
+    customExprX: '',
+    customExprY: 'a*sin(b*x)+c',
+    xMark: '',
+    yMark: '▶',
+    fnIndex: 3,
+    a: 1,
+    b: 1,
+    c: 0,
+
+    /* ---- 预设翻页 ---- */
+    presetIdx: 3,
+    presetName: '',
+
+    /* ---- 渲染数据 ---- */
+    layerStyle: { left: '0px', top: '0px' },
+    curveStyle: { left: '0px', top: '0px' },
+    gridV: [],
+    gridH: [],
+    labelsX: [],
+    labelsY: [],
+    curveDots: [],
+    zeros: [],
+    zeroCount: 0,
+    axisHS: { top: '112px' },
+    axisVS: { left: '179px' },
+    cursorShown: false,
+    cursorLineS: { left: '-40px' },
+    cursorDotS: { left: '-40px', top: '-40px' },
+
+    /* ---- 函数库（key 是语言包的键，name 在显示时才翻译） ---- */
+    fnList: [
+      { key: 'fn.linear',    expr: 'a*x+b' },
+      { key: 'fn.quadratic', expr: 'a*x^2+b*x+c' },
+      { key: 'fn.cubic',     expr: 'a*x^3+b*x+c' },
+      { key: 'fn.sin',       expr: 'a*sin(b*x)+c' },
+      { key: 'fn.cos',       expr: 'a*cos(b*x)+c' },
+      { key: 'fn.tan',       expr: 'a*tan(b*x)+c' },
+      { key: 'fn.exp',       expr: 'a*exp(b*x)+c' },
+      { key: 'fn.ln',        expr: 'a*ln(b*x)+c' },
+      { key: 'fn.pow',       expr: 'a*x^b+c' },
+      { key: 'fn.sqrt',      expr: 'a*sqrt(b*x)+c' },
+      { key: 'fn.recip',     expr: 'a/x+b' },
+      { key: 'fn.abs',       expr: 'a*abs(b*x)+c' },
+      { key: 'fn.gauss',     expr: 'a*exp(-b*x^2)+c' },
+      { key: 'fn.custom',    expr: 'a*sin(b*x)+c' }
+    ]
+  },
+
+  onInit() {
+    this.unit = 30
+    this.ox = CW / 2
+    this.oy = CH / 2
+    this.cursorT = null
+    this.cursorX = null
+    this.cursorY = null
+    this.cursorOn = false
+    this.target = 'view'
+    this.editing = 'y'
+    this.parametric = false
+    this.dragging = false
+    this.dragDist = 0
+    this.dragStart = 0
+    this.panDX = 0
+    this.panDY = 0
+    this.shiftDX = 0    /* 自上次全量重算以来的累计平移，受外扩边距 M 限制 */
+    this.shiftDY = 0
+    this.curveOffX = 0  /* 曲线层自己的偏移；任何全量重算都会把它归零 */
+    this.curveOffY = 0
+    this.panGesture = false
+    this.lastX = 0
+    this.lastY = 0
+    this.curveReady = false
+    this.rpnX = null
+    this.rpnY = null
+    this.fnX = null
+    this.fnY = null
+    this.samples = []
+    this.partsY = ('' + this.customExprY).split('')
+    this.partsX = []
+
+    /* 只预建轻量基础池，曲线池延迟到首帧后 */
+    var j
+    for (j = 0; j < CAP_GV; j++) { this.gridV.push(hideV()) }
+    for (j = 0; j < CAP_GH; j++) { this.gridH.push(hideH()) }
+    for (j = 0; j < CAP_LX; j++) { this.labelsX.push(hideL()) }
+    for (j = 0; j < CAP_LY; j++) { this.labelsY.push(hideL()) }
+    for (j = 0; j < CAP_ZERO; j++) { this.zeros.push(hideP()) }
+
+    this.compile()
+    this.updatePill()
+
+    /* 语言偏好是异步读的，读到之后重刷一遍标签（冷启动时第一帧可能还是系统语言） */
+    var self0 = this
+    i18n.ready(function () { self0.applyLocale() })
+  },
+
+  /* 重刷所有随语言变化的文本。切换语言后由 onShow / ready 回调触发。 */
+  applyLocale() {
+    i18n.syncFromApp(this.$app)
+    this.L = i18n.section('ui')
+    if (this.fnList[this.fnIndex]) { this.fnName = i18n.t(this.fnList[this.fnIndex].key) }
+    this.updateStatus()
+  },
+
+  /* 系统语言变了：只有"跟随系统"时才需要跟着换 */
+  onConfigurationChanged(e) {
+    if (e && e.type === 'locale' && !i18n.preference()) { this.applyLocale() }
+  },
+
+  onShow() {
+    this.applyLocale()
+
+    /* 第一批：网格 / 轴 / 刻度 */
+    this.renderGridLabels(false)
+
+    /* 第二批（40ms 后）：曲线 */
+    var self = this
+    setTimeout(function () {
+      self.renderCurve()
+      self.loading = false
+      self.updateStatus()
+    }, 40)
+  },
+
+  /* ---------- 编译 / 状态栏 ---------- */
+  compile() {
+    var self = this
+    try {
+      var exprY = ('' + self.customExprY).replace(/\s+/g, '')
+      var rpnY = toRPN(tokenize(exprY))
+      self.rpnY = rpnY
+      self.fnY = function (v, a, b, c) {
+        return evalRPN(rpnY, v, a, b, c)
+      }
+
+      var exprX = ('' + self.customExprX).replace(/\s+/g, '')
+      if (exprX.length) {
+        var rpnX = toRPN(tokenize(exprX))
+        self.rpnX = rpnX
+        self.fnX = function (v, a, b, c) {
+          return evalRPN(rpnX, v, a, b, c)
+        }
+        self.parametric = true
+      } else {
+        self.rpnX = null
+        self.fnX = null
+        self.parametric = false
+      }
+      return true
+    } catch (err) {
+      self.rpnX = null
+      self.rpnY = null
+      self.fnX = null
+      self.fnY = null
+      self.statusText = short(i18n.t('err.prefix') + self.errText(err), 32)
+      return false
+    }
+  },
+
+  /* 引擎只给 code，文案在这里按当前语言翻译 */
+  errText(err) {
+    var code = err && err.code
+    if (code === 'empty') { return i18n.t('err.empty') }
+    if (code === 'badNumber') { return i18n.t('err.badNumber') }
+    if (code === 'unbalanced') { return i18n.t('err.unbalanced') }
+    if (code === 'unknownSymbol') { return i18n.t('err.unknownSymbol', {w: err.detail}) }
+    if (code === 'illegalChar') { return i18n.t('err.illegalChar', {c: err.detail}) }
+    return i18n.t('err.unknown')
+  },
+
+  updatePill() {
+    this.dispY = short(this.customExprY, 13)
+    this.dispX = ('' + this.customExprX).length ? short(this.customExprX, 13) : 'x'
+  },
+
+  updateStatus() {
+    if (this.parametric) {
+      if (this.cursorOn && this.cursorX !== null) {
+        this.statusText = i18n.t('status.paraCursor', {
+          t: fmt(this.cursorT), x: fmt(this.cursorX), y: fmt(this.cursorY)
+        })
+      } else {
+        this.statusText = i18n.t('status.parametric')
+      }
+      return
+    }
+    if (this.cursorOn && this.cursorX !== null && this.fnY) {
+      var yv = this.fnY(this.cursorX, this.a, this.b, this.c)
+      this.statusText = short(i18n.t('status.cursor', {
+        x: fmt(this.cursorX), y: fmt(yv),
+        d: fmt(this.deriv(this.cursorX)), s: fmt(this.integral(this.cursorX))
+      }), 44)
+      return
+    }
+    if (this.target === 'view') {
+      var zoomTxt = fmt(Math.round(this.unit / 30 * 100) / 100)
+      var ztxt = this.zeroCount > 0 ? i18n.t('status.zeros', {n: this.zeroCount}) : ''
+      this.statusText = i18n.t('status.view', {f: this.fnName, n: zoomTxt}) + ztxt
+    } else {
+      this.statusText = i18n.t('status.target', {t: this.target, v: fmt(this[this.target])})
+    }
+  },
+
+  /* ---------- 坐标换算 ---------- */
+  xToPx(x) { return this.ox + x * this.unit },
+  yToPy(y) { return this.oy - y * this.unit },
+  pxToX(px) { return (px - this.ox) / this.unit },
+  pyToY(py) { return (this.oy - py) / this.unit },
+
+  /* ---------- 数值分析：导数 / 定积分 ---------- */
+
+  /* 中心差分求导，步长取半个像素对应的数学单位 */
+  deriv(x) {
+    if (!this.fnY) { return NaN }
+    var h = 0.5 / this.unit
+    var y1 = this.fnY(x - h, this.a, this.b, this.c)
+    var y2 = this.fnY(x + h, this.a, this.b, this.c)
+    if (!isFinite(y1) || !isFinite(y2)) { return NaN }
+    return (y2 - y1) / (2 * h)
+  },
+
+  /* 辛普森法求 [0, x] 上的定积分；区间内只要有一个点不可求就整体放弃，
+     而不是给出一个看着像样的错值。 */
+  integral(x) {
+    if (!this.fnY || !isFinite(x)) { return NaN }
+    var lo = 0
+    var hi = x
+    var sign = 1
+    if (hi < lo) {
+      sign = -1
+      var tmp = lo
+      lo = hi
+      hi = tmp
+    }
+    var n = 24
+    if (hi === lo) { return 0 }
+    var hh = (hi - lo) / n
+    var sum = 0
+    for (var i = 0; i <= n; i++) {
+      var yi = this.fnY(lo + hh * i, this.a, this.b, this.c)
+      if (!isFinite(yi)) { return NaN }
+      var w = (i === 0 || i === n) ? 1 : (i % 2 ? 4 : 2)
+      sum += w * yi
+    }
+    return sign * sum * hh / 3
+  },
+
+  /* =========================================================
+   * 3. 渲染
+   *    拖动中只动 layer 容器（1 次 setStyle），松手才全量重绘
+   * ========================================================= */
+  renderGridLabels(fast) {
+    try {
+      var self = this
+      var W = CW
+      var H = CH
+      var unit = self.unit
+      var step = niceStep(unit)
+      var v
+
+      /* 覆盖 [-M, W+M]：平移途中边缘不露空 */
+      var vx0 = Math.floor(self.pxToX(-M) / step) * step
+      var vy0 = Math.floor(self.pyToY(H + M) / step) * step
+
+      var gv = []
+      for (v = vx0; self.xToPx(v) <= W + M && gv.length < CAP_GV; v += step) {
+        gv.push({ s: { left: Math.round(self.xToPx(v)) + 'px' } })
+      }
+      padTo(gv, CAP_GV, hideV)
+      self.gridV = gv
+
+      var gh = []
+      for (v = vy0; self.yToPy(v) >= -M && gh.length < CAP_GH; v += step) {
+        gh.push({ s: { top: Math.round(self.yToPy(v)) + 'px' } })
+      }
+      padTo(gh, CAP_GH, hideH)
+      self.gridH = gh
+
+      self.axisHS = { top: Math.round(self.oy - 1) + 'px' }
+      self.axisVS = { left: Math.round(self.ox - 1) + 'px' }
+
+      if (!fast) {
+        var lx0 = []
+        var labelY = Math.round(self.oy) + 6
+        if (labelY < -20) { labelY = -20 }
+        if (labelY > H + 4) { labelY = H + 4 }
+        for (v = vx0; self.xToPx(v) <= W + M && lx0.length < CAP_LX; v += step) {
+          if (Math.abs(v) < step / 1000) { continue }
+          var lx = Math.round(self.xToPx(v)) - 24
+          lx0.push({ s: { left: lx + 'px', top: labelY + 'px' }, txt: fmt(v) })
+        }
+        padTo(lx0, CAP_LX, hideL)
+        self.labelsX = lx0
+
+        var ly0 = []
+        var labelX = Math.round(self.ox) - 52
+        for (v = vy0; self.yToPy(v) >= -M && ly0.length < CAP_LY; v += step) {
+          if (Math.abs(v) < step / 1000) { continue }
+          var ly = Math.round(self.yToPy(v)) - 8
+          ly0.push({ s: { left: labelX + 'px', top: ly + 'px' }, txt: fmt(v) })
+        }
+        padTo(ly0, CAP_LY, hideL)
+        self.labelsY = ly0
+      }
+    } catch (e) { /* 单阶段失败不中断 */ }
+  },
+
+  renderCurve() {
+    try {
+      var self = this
+      var W = CW
+      var H = CH
+
+      /* 笔触坐标是相对"视口原点"算的，所以曲线层的偏移必须先归零，
+         否则重算后整条曲线会多叠一段拖动遗留的偏移。 */
+      if (self.curveOffX !== 0 || self.curveOffY !== 0) {
+        self.curveOffX = 0
+        self.curveOffY = 0
+        self.curveStyle = { left: '0px', top: '0px' }
+      }
+
+      /* ---- 采样顶点（null = 断开），覆盖 [-M, W+M] ---- */
+      var pts = []
+      self.samples = []
+
+      if (self.parametric && self.fnX && self.fnY) {
+        for (var i = 0; i <= T_N; i++) {
+          var t = T_MIN + (T_MAX - T_MIN) * i / T_N
+          var xv = self.fnX(t, self.a, self.b, self.c)
+          var yv = self.fnY(t, self.a, self.b, self.c)
+          var ok = (typeof xv === 'number' && isFinite(xv) &&
+                    typeof yv === 'number' && isFinite(yv))
+          if (!ok) { pts.push(null); continue }
+          var px2 = self.xToPx(xv)
+          var py2 = self.yToPy(yv)
+          if (px2 < -M - 40 || px2 > W + M + 40 || py2 < -M - 40 || py2 > H + M + 40) {
+            pts.push(null)
+            continue
+          }
+          pts.push({ x: px2, y: py2 })
+          self.samples.push({ t: t, x: xv, y: yv, px: px2, py: py2 })
+        }
+      } else if (self.fnY) {
+        var xStart = -M
+        var xEnd = W + M
+        for (var ci = 0; ci <= COLS; ci++) {
+          var pxi = xStart + (xEnd - xStart) * ci / COLS
+          var xv2 = self.pxToX(pxi)
+          var yv2 = self.fnY(xv2, self.a, self.b, self.c)
+          if (typeof yv2 !== 'number' || !isFinite(yv2)) {
+            pts.push(null)
+            continue
+          }
+          var py3 = self.yToPy(yv2)
+          if (py3 < -M - 40 || py3 > H + M + 40) {
+            pts.push(null)
+            continue
+          }
+          pts.push({ x: pxi, y: py3 })
+        }
+      }
+
+      /* ---- 沿真实折线布圆点笔触 ----
+       * 按弧长布点，并把预算优先给可见区（外扩区只在拖动途中才看得到）：
+       * 见 common/plot.js。宁可点稀，绝不中途断线。 */
+      var dots = walkPens(pts, PEN_STEP, CAP_PEN, { x0: 0, x1: W })
+      var pens = []
+      for (var di = 0; di < dots.length; di++) {
+        pens.push({ s: { left: Math.round(dots[di].x - 3) + 'px', top: Math.round(dots[di].y - 3) + 'px' } })
+      }
+
+      padTo(pens, CAP_PEN, hideP)
+      self.curveDots = pens
+      self.curveReady = true
+
+      /* ---- 零点标记：相邻采样跨过 x 轴就按线性插值定位 ----
+       * 用插值而不是二分：采样间距约 6.7px，插值误差 < 1px，而标记本身有
+       * 9px 宽，肉眼看不出差别；二分要为每个零点多花十几次求值（最多 6 个
+       * 零点 ≈ 100 次 evalRPN），在真机上直接换成掉帧。
+       * 只做直角坐标模式；参数曲线没有"对 x 的符号"概念，跳过。 */
+      var zeros = []
+      if (!self.parametric && self.fnY) {
+        var prevZ = null
+        for (var zi = 0; zi < pts.length && zeros.length < CAP_ZERO; zi++) {
+          var zp = pts[zi]
+          if (zp === null) { prevZ = null; continue }
+          if (prevZ !== null) {
+            var s0 = prevZ.y - self.oy
+            var s1 = zp.y - self.oy
+            if ((s0 < 0 && s1 > 0) || (s0 > 0 && s1 < 0)) {
+              var rx = prevZ.x + (zp.x - prevZ.x) * (s0 / (s0 - s1))
+              if (rx >= 0 && rx <= W) {
+                zeros.push({ s: { left: Math.round(rx - 4) + 'px', top: Math.round(self.oy - 4) + 'px' } })
+              }
+            }
+          }
+          prevZ = zp
+        }
+      }
+      self.zeroCount = zeros.length
+      padTo(zeros, CAP_ZERO, hideP)
+      self.zeros = zeros
+    } catch (e) { /* 曲线失败不影响其他图元 */ }
+
+    /* ---- 取值游标 ---- */
+    try {
+      var self2 = this
+      if (self2.cursorOn && self2.cursorX !== null && self2.fnY) {
+        var cx = Math.round(self2.xToPx(self2.cursorX))
+        self2.cursorShown = true
+        self2.cursorLineS = { left: cx + 'px' }
+        var cyv = self2.cursorY
+        if (isFinite(cyv)) {
+          var cy = Math.round(self2.yToPy(cyv))
+          if (cy > -M && cy < CH + M) {
+            self2.cursorDotS = { left: (cx - 5) + 'px', top: (cy - 5) + 'px' }
+          } else {
+            self2.cursorDotS = { left: '-40px', top: '-40px' }
+          }
+        }
+      } else {
+        self2.cursorShown = false
+      }
+    } catch (e2) { }
+  },
+
+  renderAll(fast) {
+    this.renderGridLabels(fast)
+    if (this.curveReady || !fast) {
+      this.renderCurve()
+    }
+  },
+
+  /* ---------- 交互：按钮 ---------- */
+  zoom(k) {
+    var cx = CW / 2
+    var cy = CH / 2
+    var nu = this.unit * k
+    if (nu < 6) { nu = 6 }
+    if (nu > 240) { nu = 240 }
+    k = nu / this.unit
+    this.ox = cx - (cx - this.ox) * k
+    this.oy = cy - (cy - this.oy) * k
+    this.unit = nu
+    this.cursorOn = false
+    this.renderAll(false)
+    this.updateStatus()
+  },
+
+  onPlus() {
+    buzz(10)
+    if (this.target === 'view') {
+      this.zoom(1.25)
+    } else {
+      this.nudge(1)
+    }
+  },
+
+  onMinus() {
+    buzz(10)
+    if (this.target === 'view') {
+      this.zoom(0.8)
+    } else {
+      this.nudge(-1)
+    }
+  },
+
+  nudge(d) {
+    var key = this.target
+    var val = Math.round((this[key] + d * 0.1) * 10) / 10
+    if (val > 10) { val = 10 }
+    if (val < -10) { val = -10 }
+    this[key] = val
+    this.cursorOn = false
+    this.renderAll(false)
+    this.updateStatus()
+  },
+
+  onCycle() {
+    buzz(10)
+    var order = ['view', 'a', 'b', 'c']
+    var i = 0
+    for (var k = 0; k < order.length; k++) {
+      if (order[k] === this.target) { i = k }
+    }
+    this.target = order[(i + 1) % order.length]
+    this.updateStatus()
+  },
+
+  /* 设置页（语言切换 + 关于入口） */
+  goSettings() {
+    buzz(10)
+    try {
+      router.push({ uri: 'pages/settings' })
+    } catch (e) { /* 忽略 */ }
+  },
+
+  /* ---------- 交互：图象区触控（图层平移方案） ---------- */
+  tX(t) {
+    return (t.offsetX !== undefined && t.offsetX !== null) ? t.offsetX : t.pageX
+  },
+  tY(t) {
+    return (t.offsetY !== undefined && t.offsetY !== null) ? t.offsetY : t.pageY
+  },
+
+  onPlotTouchStart(e) {
+    var t = (e.touches && e.touches.length) ? e.touches[0] : e
+    this.lastX = this.tX(t)
+    this.lastY = this.tY(t)
+    this.dragDist = 0
+    this.panDX = 0
+    this.panDY = 0
+    this.dragging = true
+    this.dragStart = Date.now()
+  },
+
+  onPlotTouchMove(e) {
+    if (!this.dragging) { return }
+    var t = (e.touches && e.touches.length) ? e.touches[0] : e
+    var x = this.tX(t)
+    var y = this.tY(t)
+    var dx = x - this.lastX
+    var dy = y - this.lastY
+    this.lastX = x
+    this.lastY = y
+    this.dragDist += Math.abs(dx) + Math.abs(dy)
+    if (this.dragDist > 4) {
+      this.panDX += dx
+      this.panDY += dy
+      this.cursorOn = false
+
+      /* 图元只画到 [-M, W+M]，所以"自上一次性重算以来"的累计平移不能超过 M。
+         分两步走，代价差一个数量级：
+           · 并入（fold）= 只把已有图元整体平移，零求值零采样；
+           · 重算（renderAll）= 重新采样、重新求刻度值。
+         累计量到上限时才做重算。旧版每 40px 就重算一次，一次拖动要 9 次，
+         那才是拖动卡的根源。 */
+      if (Math.abs(this.panDX) > PAN_FOLD || Math.abs(this.panDY) > PAN_FOLD) {
+        this.foldPan()
+      } else {
+        /* 只平移图层容器：一帧一次 setStyle，不碰任何图元 */
+        this.layerStyle = { left: Math.round(this.panDX) + 'px', top: Math.round(this.panDY) + 'px' }
+      }
+    }
+  },
+
+  /* 把累计平移并入视口。平移的语义与"翻译整个图层"完全一致：刻度值和曲线
+     一样允许在拖动中暂时滞后，松手后的那次全量重绘会把它们全部修正。
+     代价分档处理：网格/刻度是真在动的少数节点，曲线整层挪一个偏移，
+     笔触坐标一个都不碰——一次拖动里那是 140 个节点的差别。 */
+  foldPan() {
+    var dx = this.panDX
+    var dy = this.panDY
+    this.ox += dx
+    this.oy += dy
+    this.panDX = 0
+    this.panDY = 0
+    this.layerStyle = { left: '0px', top: '0px' }
+
+    this.shiftDX += dx
+    this.shiftDY += dy
+
+    if (Math.abs(this.shiftDX) > PAN_LIMIT || Math.abs(this.shiftDY) > PAN_LIMIT) {
+      /* 外扩边距被吃光了，只能真正重算一次把覆盖范围补回来 */
+      this.renderAll(false)
+      this.shiftDX = 0
+      this.shiftDY = 0
+      return
+    }
+
+    this.gridV = shiftLeft(this.gridV, dx)
+    this.gridH = shiftTop(this.gridH, dy)
+    this.labelsX = shiftBoth(this.labelsX, dx, dy)
+    this.labelsY = shiftBoth(this.labelsY, dx, dy)
+    this.zeros = shiftBoth(this.zeros, dx, dy)
+    this.axisHS = { top: Math.round(toPx(this.axisHS.top) + dy) + 'px' }
+    this.axisVS = { left: Math.round(toPx(this.axisVS.left) + dx) + 'px' }
+
+    /* 曲线：整层平移，一个 setStyle 代替 140 个 */
+    this.curveOffX += dx
+    this.curveOffY += dy
+    this.curveStyle = {
+      left: Math.round(this.curveOffX) + 'px',
+      top: Math.round(this.curveOffY) + 'px'
+    }
+  },
+
+  onPlotTouchEnd(e) {
+    if (!this.dragging) { return }
+    this.dragging = false
+    this.panGesture = this.dragDist > 24
+
+    if (this.dragDist < 8 && (Date.now() - this.dragStart) < 500) {
+      /* 轻点：取值 */
+      var t = (e.changedTouches && e.changedTouches.length) ? e.changedTouches[0] : e
+      var px = this.tX(t) - this.panDX
+      var py = this.tY(t) - this.panDY
+      if (this.parametric && this.samples.length) {
+        var best = this.samples[0]
+        var bestD = 1e9
+        for (var i = 0; i < this.samples.length; i++) {
+          var s = this.samples[i]
+          var dx2 = s.px - px
+          var dy2 = s.py - py
+          var d2 = dx2 * dx2 + dy2 * dy2
+          if (d2 < bestD) { bestD = d2; best = s }
+        }
+        this.cursorT = best.t
+        this.cursorX = best.x
+        this.cursorY = best.y
+        this.cursorOn = true
+      } else {
+        this.cursorX = this.pxToX(px)
+        this.cursorY = this.fnY ? this.fnY(this.cursorX, this.a, this.b, this.c) : null
+        this.cursorOn = true
+      }
+    }
+
+    /* 松手：把图层偏移并入视口，全量重绘，图层归零（同一帧完成，无跳变）。
+       这次重算同时把覆盖范围和外扩边距恢复原状，所以累计量清零。 */
+    this.ox += this.panDX
+    this.oy += this.panDY
+    this.panDX = 0
+    this.panDY = 0
+    this.renderAll(false)
+    this.layerStyle = { left: '0px', top: '0px' }
+    this.shiftDX = 0
+    this.shiftDY = 0
+    this.updateStatus()
+  },
+
+  /* ---------- 交互：滑动切换预设 ---------- */
+  onSwipe(e) {
+    if (this.editorVisible || this.panGesture) {
+      this.panGesture = false
+      return
+    }
+    if (e.direction === 'left') { this.switchFn(1) }
+    else if (e.direction === 'right') { this.switchFn(-1) }
+  },
+
+  switchFn(d) {
+    var n = this.fnList.length
+    var idx = (this.fnIndex + d + n) % n
+    this.pickIndex(idx)
+  },
+
+  /* ---------- 交互：编辑面板 ---------- */
+  openEditor() {
+    buzz(10)
+    this.partsY = ('' + this.customExprY).split('')
+    this.partsX = ('' + this.customExprX).split('')
+    this.presetIdx = this.fnIndex
+    this.syncPreset()
+    this.kbPage2 = false
+    this.kbLabel = '2/2'
+    this.editorVisible = true
+  },
+
+  /* ---------- 键盘翻页：第二页放引擎支持、首页摆不下的函数 ---------- */
+  kbFlip() {
+    buzz(8)
+    this.kbPage2 = !this.kbPage2
+    this.kbLabel = this.kbPage2 ? '1/2' : '2/2'
+  },
+
+  openEditorX() {
+    this.openEditor()
+    this.editX()
+  },
+
+  openEditorY() {
+    this.openEditor()
+    this.editY()
+  },
+
+  closeEditor() {
+    this.editorVisible = false
+  },
+
+  editX() {
+    buzz(8)
+    this.editing = 'x'
+    this.xMark = '▶'
+    this.yMark = ''
+  },
+
+  editY() {
+    buzz(8)
+    this.editing = 'y'
+    this.xMark = ''
+    this.yMark = '▶'
+  },
+
+  syncPreset() {
+    var item = this.fnList[this.presetIdx]
+    if (!item) { return }
+    this.presetName = i18n.t(item.key)
+  },
+
+  presetPrev() {
+    buzz(10)
+    var n = this.fnList.length
+    this.presetIdx = (this.presetIdx - 1 + n) % n
+    this.syncPreset()
+  },
+
+  presetNext() {
+    buzz(10)
+    var n = this.fnList.length
+    this.presetIdx = (this.presetIdx + 1) % n
+    this.syncPreset()
+  },
+
+  usePreset() {
+    if (this.presetIdx === this.fnList.length - 1) {
+      this.applyCustom()
+      return
+    }
+    var item = this.fnList[this.presetIdx]
+    if (!item) { return }
+    this.customExprY = item.expr
+    this.customExprX = ''
+    this.partsY = item.expr.split('')
+    this.partsX = []
+    this.fnIndex = this.presetIdx
+    this.fnName = i18n.t(item.key)
+    if (this.compile()) {
+      this.cursorOn = false
+      this.editorVisible = false
+      this.updatePill()
+      this.renderAll(false)
+      buzz(14)
+      this.updateStatus()
+    }
+    /* 失败时保留错误原因（见 applyCustom 的说明） */
+  },
+
+  /* =========================================================
+   * 4. 按键输入：每键独立事件名 + pushToken
+   * ========================================================= */
+  pushToken(t) {
+    if (this.editing === 'x') {
+      if (t === 'AC') {
+        this.partsX = []
+      } else if (t === 'BS') {
+        if (this.partsX.length) { this.partsX.pop() }
+      } else {
+        this.partsX.push(t)
+      }
+      this.customExprX = this.partsX.join('')
+    } else {
+      if (t === 'AC') {
+        this.partsY = []
+      } else if (t === 'BS') {
+        if (this.partsY.length) { this.partsY.pop() }
+      } else {
+        this.partsY.push(t)
+      }
+      this.customExprY = this.partsY.join('')
+    }
+    buzz(8)
+  },
+
+  k7() { this.pushToken('7') },
+  k8() { this.pushToken('8') },
+  k9() { this.pushToken('9') },
+  kDiv() { this.pushToken('/') },
+  kMul() { this.pushToken('*') },
+
+  k4() { this.pushToken('4') },
+  k5() { this.pushToken('5') },
+  k6() { this.pushToken('6') },
+  kSub() { this.pushToken('-') },
+  kAdd() { this.pushToken('+') },
+
+  k1() { this.pushToken('1') },
+  k2() { this.pushToken('2') },
+  k3() { this.pushToken('3') },
+  kLp() { this.pushToken('(') },
+  kRp() { this.pushToken(')') },
+
+  k0() { this.pushToken('0') },
+  kDot() { this.pushToken('.') },
+  kPow() { this.pushToken('^') },
+  kX() { this.pushToken('x') },
+  kBS() { this.pushToken('BS') },
+
+  kSin() { this.pushToken('sin(') },
+  kCos() { this.pushToken('cos(') },
+  kTan() { this.pushToken('tan(') },
+  kLn() { this.pushToken('ln(') },
+  kLog() { this.pushToken('log(') },
+
+  kSqrt() { this.pushToken('sqrt(') },
+  kExp() { this.pushToken('exp(') },
+  kAbs() { this.pushToken('abs(') },
+  kPi() { this.pushToken('pi') },
+  kE() { this.pushToken('e') },
+
+  kA() { this.pushToken('a') },
+  kB() { this.pushToken('b') },
+  kC() { this.pushToken('c') },
+  kT() { this.pushToken('t') },
+  kAC() { this.pushToken('AC') },
+
+  /* ---- 键盘第二页 ---- */
+  kAsin() { this.pushToken('asin(') },
+  kAcos() { this.pushToken('acos(') },
+  kAtan() { this.pushToken('atan(') },
+  kLg() { this.pushToken('lg(') },
+  kFloor() { this.pushToken('floor(') },
+  kCeil() { this.pushToken('ceil(') },
+  kRound() { this.pushToken('round(') },
+  kSign() { this.pushToken('sign(') },
+
+  /* ---- 绘制当前编辑内容 ---- */
+  applyCustom() {
+    var ey = ('' + this.customExprY).replace(/\s+/g, '')
+    var ex = ('' + this.customExprX).replace(/\s+/g, '')
+    if (!ey.length) {
+      this.statusText = i18n.t('ui.emptyY')
+      return
+    }
+    this.customExprY = ey
+    this.customExprX = ex
+    this.fnIndex = this.fnList.length - 1
+    this.fnName = i18n.t('fn.custom')
+    if (this.compile()) {
+      this.cursorOn = false
+      this.editorVisible = false
+      this.updatePill()
+      this.renderAll(false)
+      buzz(14)
+      this.updateStatus()
+    }
+    /* 编译失败时不能调 updateStatus()：它会把 compile() 刚写下的错误原因覆盖掉，
+       用户就永远看不到为什么画不出来。 */
+  },
+
+  /* ---- 选中预设并绘制 ---- */
+  pickIndex(idx) {
+    var item = this.fnList[idx]
+    if (!item) { return }
+    if (idx === this.fnList.length - 1) {
+      this.applyCustom()
+      return
+    }
+    this.customExprY = item.expr
+    this.customExprX = ''
+    this.partsY = item.expr.split('')
+    this.partsX = []
+    this.fnIndex = idx
+    this.fnName = i18n.t(item.key)
+    if (this.compile()) {
+      this.cursorOn = false
+      this.editorVisible = false
+      this.updatePill()
+      this.renderAll(false)
+      buzz(14)
+      this.updateStatus()
+    } else {
+      this.editorVisible = true
+    }
+    /* 失败时保留错误原因（见 applyCustom 的说明） */
+  }
+}
+</script>

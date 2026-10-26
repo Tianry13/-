@@ -1,0 +1,70 @@
+{
+  "ui": {
+    "drawing": "Plotting…",
+    "cycle": "Mode",
+    "func": "Func",
+    "settings": "Set",
+    "editorTitle": "Expression",
+    "draw": "Plot",
+    "back": "Back",
+    "emptyY": "y is empty"
+  },
+  "fn": {
+    "linear": "Linear",
+    "quadratic": "Quadratic",
+    "cubic": "Cubic",
+    "sin": "Sine",
+    "cos": "Cosine",
+    "tan": "Tangent",
+    "exp": "Exponential",
+    "ln": "Logarithm",
+    "pow": "Power",
+    "sqrt": "Root",
+    "recip": "Reciprocal",
+    "abs": "Absolute",
+    "gauss": "Gaussian",
+    "custom": "Custom"
+  },
+  "status": {
+    "view": "{f} · Zoom {n}x · Drag to pan",
+    "zeros": " · Zeros {n}",
+    "target": "{t} = {v} · Tap to read",
+    "parametric": "Parametric · tap to read t",
+    "paraCursor": "t {t} x {x} y {y}",
+    "cursor": "x {x} y {y} y' {d} S {s}"
+  },
+  "err": {
+    "prefix": "Error: ",
+    "empty": "expression is empty",
+    "badNumber": "bad number",
+    "unknownSymbol": "unknown symbol {w}",
+    "illegalChar": "illegal character {c}",
+    "unbalanced": "unbalanced parentheses",
+    "unknown": "unknown cause"
+  },
+  "about": {
+    "title": "GraphCalc",
+    "ver": "Public beta 2",
+    "author": "By Tianry",
+    "feedback": "Feedback: mcstart2024@163.com",
+    "fnHead": "Features",
+    "fn1": "· 14 presets + custom expression",
+    "fn2": "· Zoom · pan · tap to read",
+    "fn3": "· Live a / b / c parameters",
+    "fn4": "· Readout y · y' · S integral",
+    "fn5": "· Marks zeros in view",
+    "synHead": "Syntax",
+    "syn1": "vars x a b c · consts pi e",
+    "syn2": "operators + − × ÷ ^ ( )",
+    "syn3": "16 functions · more on kb 2/2",
+    "back": "Back",
+    "hint": "Swipe right to go back"
+  },
+  "set": {
+    "title": "Settings",
+    "lang": "Language",
+    "system": "System",
+    "about": "About",
+    "back": "Back"
+  }
+}

@@ -1,0 +1,160 @@
+<template>
+  <stack class="page">
+    <div class="wrap column" @swipe="onSwipe">
+      <text class="s-title">{{L.title}}</text>
+      <text class="s-label">{{L.lang}}</text>
+
+      <div class="{{$item.cls}}" for="{{langs}}" onclick="pickLang($idx)">
+        <text class="row-name">{{$item.name}}</text>
+      </div>
+
+      <div class="row row-alt" onclick="goAbout">
+        <text class="row-name">{{L.about}}</text>
+      </div>
+
+      <div class="row row-alt" onclick="goBack">
+        <text class="row-name">{{L.back}}</text>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<style>
+.page {
+  width: 466px;
+  height: 466px;
+  background-color: #060c12;
+}
+.column { flex-direction: column; }
+.row    { flex-direction: row; }
+
+.wrap {
+  width: 466px;
+  height: 466px;
+  align-items: center;
+}
+
+.s-title {
+  margin-top: 40px;
+  height: 28px;
+  font-size: 20px;
+  color: #e6f2ef;
+}
+.s-label {
+  height: 18px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #2ce8c0;
+}
+
+/* 语言行：未选中是暗底，选中是 accent 底 + 边框（圆角需要 border 才生效） */
+.row {
+  width: 296px;
+  height: 44px;
+  margin-top: 6px;
+  border-width: 1px;
+  border-color: #12222e;
+  border-radius: 12px;
+  background-color: #0d1620;
+  align-items: center;
+  justify-content: center;
+}
+.row-on {
+  border-color: #2ce8c0;
+  background-color: #14364d;
+}
+.row-alt {
+  margin-top: 8px;
+  background-color: #12222e;
+}
+.row-name {
+  font-size: 16px;
+  color: #e6f2ef;
+}
+</style>
+
+<script>
+import router from '@system.router'
+import vibrator from '@system.vibrator'
+import * as i18n from '../../common/i18n.js'
+
+function buzz(ms) {
+  try {
+    vibrator.vibrate({ duration: ms || 15 })
+  } catch (e) { /* 忽略振动失败 */ }
+}
+
+export default {
+  private: {
+    L: i18n.section('set'),
+    langs: []
+  },
+
+  onInit() {
+    this.langs = this.buildLangs()
+    var self = this
+    i18n.ready(function () { self.refresh() })
+  },
+
+  onShow() {
+    this.refresh()
+  },
+
+  /* 语言列表：第一行"跟随系统"，其余是各语言的原生写法。
+     当前生效的那一行用 accent 底色标出来。 */
+  buildLangs() {
+    var pref = i18n.preference()
+    var out = []
+    out.push({
+      code: '',
+      name: i18n.t('set.system') + ' · ' + i18n.nativeName(i18n.locale())
+    })
+    var codes = i18n.codes()
+    for (var i = 1; i < codes.length; i++) {
+      out.push({ code: codes[i], name: i18n.nativeName(codes[i]) })
+    }
+    /* 选中行加 class；动态 class 用 $item.cls 绑定，不在模板里拼字符串 */
+    for (var j = 0; j < out.length; j++) {
+      out[j].cls = (out[j].code === pref) ? 'row row-on' : 'row'
+    }
+    return out
+  },
+
+  refresh() {
+    i18n.syncFromApp(this.$app)
+    this.L = i18n.section('set')
+    this.langs = this.buildLangs()
+  },
+
+  pickLang(idx) {
+    var row = this.langs[idx]
+    if (!row) { return }
+    if (i18n.preference() === row.code) {
+      buzz(8)
+      return
+    }
+    i18n.setPref(row.code)
+    i18n.publish(this.$app)
+    buzz(14)
+    this.refresh()
+  },
+
+  goAbout() {
+    buzz(10)
+    try {
+      router.push({ uri: 'pages/about' })
+    } catch (e) { /* 忽略 */ }
+  },
+
+  goBack() {
+    try {
+      router.back()
+    } catch (e) { /* 忽略 */ }
+  },
+
+  onSwipe(e) {
+    if (e.direction === 'right') { this.goBack() }
+  }
+}
+</script>

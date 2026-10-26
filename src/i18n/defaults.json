@@ -1,0 +1,70 @@
+{
+  "ui": {
+    "drawing": "绘制中…",
+    "cycle": "切换",
+    "func": "函数",
+    "settings": "设置",
+    "editorTitle": "输入函数表达式",
+    "draw": "绘制",
+    "back": "返回",
+    "emptyY": "y 表达式为空"
+  },
+  "fn": {
+    "linear": "一次函数",
+    "quadratic": "二次函数",
+    "cubic": "三次函数",
+    "sin": "正弦函数",
+    "cos": "余弦函数",
+    "tan": "正切函数",
+    "exp": "指数函数",
+    "ln": "对数函数",
+    "pow": "幂函数",
+    "sqrt": "根式函数",
+    "recip": "反比例",
+    "abs": "绝对值",
+    "gauss": "高斯函数",
+    "custom": "自定义"
+  },
+  "status": {
+    "view": "{f} · 缩放 {n}x · 拖动平移",
+    "zeros": " · 零点 {n}",
+    "target": "{t} = {v} · 轻点图取值",
+    "parametric": "参数曲线 · 轻点取 t 值",
+    "paraCursor": "t {t} x {x} y {y}",
+    "cursor": "x {x} y {y} y' {d} S {s}"
+  },
+  "err": {
+    "prefix": "表达式错误 ",
+    "empty": "表达式为空",
+    "badNumber": "数字格式错误",
+    "unknownSymbol": "未知符号 {w}",
+    "illegalChar": "非法字符 {c}",
+    "unbalanced": "括号不匹配",
+    "unknown": "未知原因"
+  },
+  "about": {
+    "title": "枳计算器",
+    "ver": "GraphCalc 公开测试版 2",
+    "author": "作者：Tianry",
+    "feedback": "反馈：mcstart2024@163.com",
+    "fnHead": "功能",
+    "fn1": "· 14 个预设 + 自定义表达式",
+    "fn2": "· 缩放 · 平移 · 轻点取值",
+    "fn3": "· a b c 参数实时调节",
+    "fn4": "· 读数 y · y' 导数 · S 定积分",
+    "fn5": "· 自动标出可见区零点",
+    "synHead": "语法",
+    "syn1": "变量 x a b c · 常量 pi e",
+    "syn2": "运算 + − × ÷ ^ ( )",
+    "syn3": "16 个函数·更多见键盘 2/2 页",
+    "back": "返回",
+    "hint": "右滑也可返回"
+  },
+  "set": {
+    "title": "设置",
+    "lang": "语言",
+    "system": "跟随系统",
+    "about": "关于",
+    "back": "返回"
+  }
+}

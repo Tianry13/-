@@ -1,0 +1,129 @@
+<template>
+    <div class="page column" @swipe="onSwipe">
+      <text class="a-title">{{L.title}}</text>
+      <text class="a-ver">{{L.ver}}</text>
+  
+      <div class="a-card column">
+        <text class="a-line">{{L.author}}</text>
+        <text class="a-line">{{L.feedback}}</text>
+      </div>
+      <div class="a-card column">
+        <text class="a-h">{{L.fnHead}}</text>
+        <text class="a-line">{{L.fn1}}</text>
+        <text class="a-line">{{L.fn2}}</text>
+        <text class="a-line">{{L.fn3}}</text>
+        <text class="a-line">{{L.fn4}}</text>
+        <text class="a-line">{{L.fn5}}</text>
+      </div>
+  
+      <div class="a-card column">
+        <text class="a-h">{{L.synHead}}</text>
+        <text class="a-line">{{L.syn1}}</text>
+        <text class="a-line">{{L.syn2}}</text>
+        <text class="a-line">{{L.syn3}}</text>
+      </div>
+  
+      <div class="a-btn row" onclick="goBack">
+        <text class="a-btn-t">{{L.back}}</text>
+      </div>
+      <text class="a-hint">{{L.hint}}</text>
+    </div>
+  </template>
+  
+  <style>
+  .page {
+    width: 466px;
+    height: 466px;
+    background-color: #060c12;
+    align-items: center;
+  }
+  .column { flex-direction: column; }
+  .row    { flex-direction: row; }
+  
+  .a-title {
+    margin-top: 36px;
+    height: 26px;
+    font-size: 22px;
+    color: #e6f2ef;
+  }
+  .a-ver {
+    height: 18px;
+    margin-top: 2px;
+    font-size: 13px;
+    color: #2ce8c0;
+  }
+  .a-card {
+    width: 330px;
+    margin-top: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-radius: 12px;
+    background-color: #0d1620;
+    align-items: center;
+  }
+  .a-h {
+    height: 18px;
+    font-size: 14px;
+    color: #2ce8c0;
+  }
+  .a-line {
+    height: 20px;
+    margin-top: 1px;
+    font-size: 13px;
+    color: #9db2c4;
+  }
+  .a-btn {
+    width: 140px;
+    height: 42px;
+    margin-top: 8px;
+    border-radius: 14px;
+    background-color: #12222e;
+    align-items: center;
+    justify-content: center;
+  }
+  .a-btn-t {
+    font-size: 18px;
+    color: #2ce8c0;
+  }
+  .a-hint {
+    height: 16px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #44586c;
+  }
+  </style>
+  
+  <script>
+  import router from '@system.router'
+  import * as i18n from '../../common/i18n.js'
+  
+  export default {
+    private: {
+      L: i18n.section('about')
+    },
+  
+    onInit() {
+      var self = this
+      i18n.ready(function () { self.applyLocale() })
+    },
+  
+    onShow() {
+      this.applyLocale()
+    },
+  
+    applyLocale() {
+      i18n.syncFromApp(this.$app)
+      this.L = i18n.section('about')
+    },
+  
+    goBack() {
+      router.back()
+    },
+  
+    onSwipe(e) {
+      if (e.direction === 'right') {
+        router.back()
+      }
+    }
+  }
+  </script>

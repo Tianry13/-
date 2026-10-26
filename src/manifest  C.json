@@ -1,0 +1,37 @@
+{
+  "package": "com.math.tianry.graphcalc",
+  "name": "枳计算器",
+  "versionName": "0.5_redmiwatch",
+  "versionCode": 1,
+  "minPlatformVersion": 1000,
+  "icon": "/common/logo.png",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+	{
+		"name": "system.router"
+	},
+	{
+		"name": "system.vibrator"
+	}
+],
+  "config": {
+    "logLevel": "log",
+    "designWidth": "device-width"
+  },
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+	"pages/index": {
+		"component": "index"
+	},
+	"pages/detail": {
+		"component": "detail"
+	},
+	"pages/about": {
+		"component": "about"
+	}
+}
+  }
+}
